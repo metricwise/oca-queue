@@ -404,7 +404,15 @@ class Channel:
     without risking to overflow the system.
     """
 
-    def __init__(self, name, parent, capacity=None, sequential=False, throttle=0):
+    def __init__(
+        self,
+        name,
+        parent,
+        capacity=None,
+        sequential=False,
+        throttle=0,
+        subcapacity=None,
+    ):
         self.name = name
         self.parent = parent
         if self.parent:
@@ -414,9 +422,10 @@ class Channel:
         self._running = set()
         self._failed = set()
         self._pause_until = 0  # utc seconds since the epoch
-        self.capacity = capacity
+        self.capacity = capacity or (parent and parent.subcapacity)
         self.throttle = throttle  # seconds
         self.sequential = sequential
+        self.subcapacity = subcapacity
 
     @property
     def sequential(self):
@@ -433,11 +442,13 @@ class Channel:
 
         * capacity
         * sequential
+        * subcapacity
         * throttle
         """
         assert self.fullname.endswith(config["name"])
         self.capacity = config.get("capacity", None)
         self.sequential = bool(config.get("sequential", False))
+        self.subcapacity = config.get("subcapacity", None)
         self.throttle = int(config.get("throttle", 0))
         if self.sequential and self.capacity != 1:
             raise ValueError("A sequential channel must have a capacity of 1")
@@ -897,7 +908,16 @@ class ChannelManager:
                             f"Invalid channel config {config_string}: "
                             f"duplicate key {k}"
                         )
-                    config[k] = v
+                    if k == "subcapacity":
+                        try:
+                            config[k] = int(v)
+                        except Exception as ex:
+                            raise ValueError(
+                                f"Invalid channel config {config_string}: "
+                                f"invalid subcapacity {v}"
+                            ) from ex
+                    else:
+                        config[k] = v
             else:
                 config["capacity"] = 1
             res.append(config)
