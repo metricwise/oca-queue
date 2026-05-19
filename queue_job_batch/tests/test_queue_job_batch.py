@@ -35,3 +35,16 @@ class TestJobBatch(TransactionCase):
         self.jobs[1].set_done()
         self.jobs[1].store()
         self.job_batch.check_done()
+
+    def test_execution_time(self):
+        self.assertEqual(self.job_batch.execution_time, 0)
+        for job in self.jobs:
+            job.set_started()
+            job.perform()
+            job.set_done()
+            job.store()
+            self.assertGreater(job.exec_time, 0)
+        self.assertEqual(
+            self.job_batch.execution_time,
+            self.jobs[0].exec_time + self.jobs[1].exec_time,
+        )
