@@ -1136,10 +1136,11 @@ class ChannelManager:
             del self._jobs_by_uuid[job.uuid]
 
     def remove_db(self, db_name):
-        for job in list(self._jobs_by_uuid.values()):
+        for uuid in list(self._jobs_by_uuid.keys()):
+            job = self._jobs_by_uuid[uuid]
             if job.db_name == db_name:
                 job.channel.remove(job)
-                del self._jobs_by_uuid[job.uuid]
+                del self._jobs_by_uuid[uuid]
 
     def get_jobs_to_run(self, now):
         return self._root_channel.get_jobs_to_run(now)
